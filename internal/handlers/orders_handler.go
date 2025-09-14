@@ -2,10 +2,10 @@
 package handlers
 
 import (
-	orders2 "first_go_project/internal/events/orders"
+	orders "first_go_project/internal/events/orders"
 	"first_go_project/internal/middleware"
-	models2 "first_go_project/internal/models"
-	repository2 "first_go_project/internal/repository"
+	models "first_go_project/internal/models"
+	repository "first_go_project/internal/repository"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -42,26 +42,26 @@ func createOrder(c *gin.Context) {
 	}
 	userID := uid.(uint)
 
-	order := &models2.Order{
+	order := &models.Order{
 		Name:   payload.Name,
 		UserID: &userID,
 	}
 
-	var items []models2.OrderItem
+	var items []models.OrderItem
 	for _, it := range payload.Items {
-		items = append(items, models2.OrderItem{
+		items = append(items, models.OrderItem{
 			ProductID: it.ProductID,
 			Quantity:  it.Quantity,
 		})
 	}
 
-	if err := repository2.CreateOrderWithItems(order, items); err != nil {
+	if err := repository.CreateOrderWithItems(order, items); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Публикуем событие
-	orders2.PublishOrderCreated(orders2.OrderCreatedEvent{
+	orders.PublishOrderCreated(orders.OrderCreatedEvent{
 		OrderID: order.ID,
 		UserID:  userID,
 		Status:  "NEW",
@@ -71,18 +71,18 @@ func createOrder(c *gin.Context) {
 }
 
 func getOrders(c *gin.Context) {
-	orders, err := repository2.GetOrders()
+	ordersRes, err := repository.GetOrders()
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, orders)
+	c.JSON(http.StatusOK, ordersRes)
 }
 
 func getOrderById(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	order, err := repository2.GetOrderByID(uint(id))
+	order, err := repository.GetOrderByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -93,26 +93,26 @@ func getOrderById(c *gin.Context) {
 func getOrdersByUserId(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
-	user, err := repository2.GetUserByID(uint(id))
+	user, err := repository.GetUserByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	orders, err := repository2.GetOrdersByUserID(uint(id))
-	if err != nil || len(orders) == 0 {
+	ordersRes, err := repository.GetOrdersByUserID(uint(id))
+	if err != nil || len(ordersRes) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": fmt.Sprintf("Orders of %s not found", user.Name),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, orders)
+	c.JSON(http.StatusOK, ordersRes)
 }
 
 func updateOrder(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	order, err := repository2.GetOrderByID(uint(id))
+	order, err := repository.GetOrderByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
@@ -123,7 +123,7 @@ func updateOrder(c *gin.Context) {
 		return
 	}
 
-	if err := repository2.UpdateOrder(order); err != nil {
+	if err := repository.UpdateOrder(order); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -133,7 +133,7 @@ func updateOrder(c *gin.Context) {
 
 func deleteOrder(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	if err := repository2.DeleteOrder(uint(id)); err != nil {
+	if err := repository.DeleteOrder(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
